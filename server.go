@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 
 	"github.com/rs/xid"
 	"go.uber.org/zap"
@@ -12,7 +13,8 @@ import (
 
 // Server is main package struct
 type Server struct {
-	prefix string
+	prefix  string
+	baseURL string
 
 	logger *zap.Logger
 }
@@ -27,6 +29,13 @@ func Prefix(prefix string) Opt {
 	}
 }
 
+// BaseURL sets base url to server
+func BaseURL(baseURL string) Opt {
+	return func(s *Server) {
+		s.baseURL = baseURL
+	}
+}
+
 // New returns new server
 func New(fns ...Opt) (*Server, error) {
 	config := zap.NewProductionConfig()
@@ -37,7 +46,7 @@ func New(fns ...Opt) (*Server, error) {
 		return nil, err
 	}
 
-	s := &Server{logger: logger, prefix: "/"}
+	s := &Server{logger: logger, prefix: "/", baseURL: "http://localhost:8080/"}
 
 	for _, fn := range fns {
 		fn(s)
@@ -84,7 +93,9 @@ func (s *Server) UploadHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("File Size: %+v\n", handler.Size)
 	fmt.Printf("MIME Header: %+v\n", handler.Header)
 
-	f, err := os.OpenFile(fmt.Sprintf("%s.jpg", uploadID), os.O_CREATE|os.O_WRONLY, os.ModePerm)
+	fname := fmt.Sprintf("%s.jpg", uploadID)
+
+	f, err := os.OpenFile(fname, os.O_CREATE|os.O_WRONLY, os.ModePerm)
 	if err != nil {
 		fmt.Println("Error Retrieving the File")
 		fmt.Println(err)
@@ -97,6 +108,8 @@ func (s *Server) UploadHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Println(err)
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	// return that we have successfully uploaded our file!
-	fmt.Fprintf(w, "Successfully Uploaded File\n")
+	fmt.Fprintf(w, `{"url":"%s"}`, filepath.Join(s.baseURL, fname))
+
 }
