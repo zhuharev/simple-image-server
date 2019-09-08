@@ -5,7 +5,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"path/filepath"
 
 	"github.com/rs/xid"
 	"go.uber.org/zap"
@@ -110,6 +109,5 @@ func (s *Server) UploadHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	// return that we have successfully uploaded our file!
-	fmt.Fprintf(w, `{"url":"%s"}`, filepath.Join(s.baseURL, fname))
-
+	fmt.Fprintf(w, `{"url":"%s"}`, s.baseURL+fname)
 }
