@@ -1,11 +1,14 @@
 package simpleimageserver
 
 import (
+	"bytes"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 
+	"github.com/h2non/filetype"
 	"github.com/rs/xid"
 	"go.uber.org/zap"
 )
@@ -92,7 +95,21 @@ func (s *Server) UploadHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("File Size: %+v\n", handler.Size)
 	fmt.Printf("MIME Header: %+v\n", handler.Header)
 
-	fname := fmt.Sprintf("%s.jpg", uploadID)
+	bts, err := ioutil.ReadAll(file)
+	if err != nil {
+		fmt.Println("Error read file the File")
+		fmt.Println(err)
+		return
+	}
+
+	matchRes, err := filetype.Match(bts)
+	if err != nil {
+		fmt.Println("match file type")
+		fmt.Println(err)
+		return
+	}
+
+	fname := fmt.Sprintf("%s.%s", uploadID, matchRes.Extension)
 
 	f, err := os.OpenFile(fname, os.O_CREATE|os.O_WRONLY, os.ModePerm)
 	if err != nil {
@@ -101,7 +118,7 @@ func (s *Server) UploadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer f.Close()
 
-	_, err = io.Copy(f, file)
+	_, err = io.Copy(f, bytes.NewReader(bts))
 	if err != nil {
 		fmt.Println("Error")
 		fmt.Println(err)
